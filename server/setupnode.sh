@@ -1,4 +1,9 @@
-﻿echo "server setting..."
+﻿#!/bin/bash
+
+# Exit on error
+set -e
+
+echo "server setting..."
 echo "npm version: $(npm --version)"
 echo "pm2 version: $(pm2 --version)"
 
@@ -14,4 +19,4 @@ curl -O "https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/he
 echo "Installing packages..."
 npm install
 
-pm2 start app.js
+pm2 start node.js
