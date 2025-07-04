@@ -50,7 +50,7 @@ aws configure set default.s3.signature_version s3v4
 
 BASE_NAME="world1" # Zip file name (without extension)
 DEST="mc1"           # Path where to download the file
-CLOUD_PATH="mc"     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
+CLOUD_PATH="mc/"     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
 AWS_ACCESS_KEY_ID="usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93"
 AWS_SECRET_ACCESS_KEY="$SECRET"
 BUCKET="mcstorage"         # C2 bucket name
