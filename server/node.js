@@ -14,8 +14,11 @@ app.use(session({
   saveUninitialized: false
 }));
 
+const userName = "admin@sparking.com";
+const pass = "minecraft123";
+
 function isAuthenticated(req, res, next) {
-  if (req.session && req.session.user === 'admin@sparking.com') {
+  if (req.session && req.session.user === userName) {
     return next();
   }
   res.redirect('/login');
@@ -61,7 +64,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
-  if (email === 'admin@tellosoft.com' && password === 'minecraft123') {
+  if (email === userName && password === pass) {
     req.session.user = email;
     res.redirect('/dashboard');
   } else {

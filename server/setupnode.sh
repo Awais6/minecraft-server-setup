@@ -7,6 +7,9 @@ echo "server setting..."
 echo "npm version: $(npm --version)"
 echo "pm2 version: $(pm2 --version)"
 
+echo "Stopping previous node"
+pm2 stop node
+
 mkdir -p "server"
 cd server
 
@@ -20,3 +23,5 @@ echo "Installing packages..."
 npm install
 
 pm2 start node.js
+pm2 monit
+pm2 save

@@ -14,6 +14,8 @@ chmod +x setupnode.sh
 
 ## Starting node js server
 pm2 start node.js
+pm2 monit
+pm2 save
 
 pm2 list         # shows app name and ID
 pm2 stop node
