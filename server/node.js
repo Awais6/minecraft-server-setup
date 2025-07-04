@@ -113,7 +113,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
           <button class="btn btn-danger" onclick="confirmAction('/stop', 'Are you sure you want to STOP the server?')" ${disableStop}>Stop Server</button>
         </div>
 
-        <a href="/status" class="btn btn-success">Server Status</a>
+        <a href="/status" class="btn btn-success">Server Status:</a>
         <a href="/logout" class="btn btn-secondary">Logout</a>
       </div>
     </body>
@@ -130,23 +130,22 @@ app.get('/', isAuthenticated, (req, res) => res.send('Hello from Express!'));
 // Start mc server
 app.get('/start', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
+  const serverPath = path.resolve(__dirname, '../mc1');
 
-  // Check if already running
-  exec(`screen -ls | grep ${screenName}`, (err, stdout) => {
-    if (stdout.includes(screenName)) {
+  // Check for live session via `-Q echo` (exit code 0 = exists)
+  exec(`screen -S ${screenName} -Q echo`, (err) => {
+    if (!err) {
       return res.send(`<pre>Server already running in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
     }
 
-    // Launch the server inside a new screen session using spawn
-    const serverPath = path.resolve(__dirname, '../mc1'); // Adjust as needed
-    const screenArgs = [
+    // Spawn a detached screen session
+    const args = [
       '-dmS', screenName,
       'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'
     ];
-
-    const child = spawn('screen', screenArgs, {
+    const child = spawn('screen', args, {
       cwd: serverPath,
-      stdio: 'ignore', // No output capture
+      stdio: 'ignore',
       detached: true
     });
 
@@ -154,33 +153,37 @@ app.get('/start', isAuthenticated, (req, res) => {
       return res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`);
     });
 
-    child.unref(); // Allow the child process to keep running after Node exits
-
-    return res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
+    child.unref();
+    res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
   });
 });
 
 // Stop Minecraft server gracefully
 app.get('/stop', isAuthenticated, (req, res) => {
-  const stopCmd = `screen -S mc1 -X stuff "stop\n"`;
+  const screenName = 'mc1';
 
-  exec(stopCmd, (error) => {
+  // 1) send the "stop" command  
+  // 2) then quit the screen session to clean up
+  const cmd = [
+    `screen -S ${screenName} -X stuff "stop\n"`,
+    `screen -S ${screenName} -X quit`
+  ].join(' && ');
+
+  exec(cmd, (error) => {
     if (error) {
-      return res.status(500).send(`<pre>Failed to send stop command: ${error.message}</pre><a href="/dashboard">Back</a>`);
+      return res.status(500).send(`<pre>Failed to stop server: ${error.message}</pre><a href="/dashboard">Back</a>`);
     }
-    res.send(`<pre>Stop command sent to Minecraft server.</pre><a href="/dashboard">Back</a>`);
+    res.send(`<pre>Server stopped and screen session '${screenName}' closed.</pre><a href="/dashboard">Back</a>`);
   });
 });
 
 // Check server status
 const getServerStatus = () => {
+  const screenName = 'mc1';
   return new Promise((resolve) => {
-    exec("screen -ls | grep mc1", (err, stdout) => {
-      if (stdout.includes('mc1')) {
-        resolve("running");
-      } else {
-        resolve("stopped");
-      }
+    // Query mode: returns exit code 0 if session exists
+    exec(`screen -S ${screenName} -Q echo`, (err) => {
+      resolve(err ? 'stopped' : 'running');
     });
   });
 };
