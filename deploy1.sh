@@ -29,12 +29,12 @@ sudo ./aws/install
 echo "✅ AWS found: $(aws --version)"
 aws configure set default.s3.signature_version s3v4
 
-BASE_NAME="world" # Zip file name (without extension)
-DEST=""           # Path where to download the file
-CLOUD_PATH=""     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
-AWS_ACCESS_KEY_ID=""
+BASE_NAME="world1" # Zip file name (without extension)
+DEST="mc1"           # Path where to download the file
+CLOUD_PATH="mc"     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
+AWS_ACCESS_KEY_ID="usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93"
 AWS_SECRET_ACCESS_KEY=""
-BUCKET=""         # C2 bucket name
+BUCKET="mcstorage"         # C2 bucket name
 ENDPOINT=""
 
 [[ -z "$DEST" ]] && DEST="./"
@@ -78,7 +78,25 @@ downloaded_mb=$(awk "BEGIN {printf \"%.2f\", $downloaded_size/1024/1024}")
 echo -e "\nDownloaded file size: ${downloaded_mb} MB"
 echo "✅ Downloaded $FILE"
 
+echo "Extracting Archive..."
 
+FILE_ZST="$DEST/${BASE_NAME}.tar.zst"
 
+if [ -f "$FILE_ZST" ]; then
+  echo "📦 Extracting $FILE_ZST to $DEST"
+  total_size=$(stat -c%s "$FILE_ZST")
+  pv -s "$total_size" "$FILE_ZST" | tar -I zstd -xf - -C "$DEST"
+  rm -f "$FILE_ZST"
+  echo "✅ Extracted and deleted $FILE_ZST"
+else
+  echo "⚠️ No archive file found to extract."
+  exit 0
+fi
+
+echo "✅ Extracted contents:"
+ls -l "$DEST"
+extracted_size=$(du -sb "$DEST" | awk '{print $1}')
+extracted_mb=$(awk "BEGIN {printf \"%.2f\", $extracted_size/1024/1024}")
+echo -e "\nExtracted output size: ${extracted_mb} MB"
 
 echo "✅ Minecraft server setup complete! Use 'sudo systemctl status minecraft' to check status."
