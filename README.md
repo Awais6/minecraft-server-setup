@@ -7,6 +7,11 @@ curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/hea
 chmod +x deploy1.sh
 ./deploy1.sh --secret="your_secret_here"
 
+## Auto Setup Node Js Server
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/server/setupnode.sh
+chmod +x setupnode.sh
+./setupnode.sh
+
 ## Starting node js server
 pm2 start node.js
 
