@@ -3,6 +3,7 @@ const statusMonitor = require('express-status-monitor');
 const session = require('express-session');
 const { exec, spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 const port = 3000;
 
@@ -25,6 +26,7 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
+// Login page
 app.get('/login', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -63,113 +65,141 @@ app.get('/login', (req, res) => {
   `);
 });
 
+// Handle login
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (email === userName && password === pass) {
     req.session.user = email;
-    res.redirect('/dashboard');
-  } else {
-    res.status(401).send(`
-      <div class="alert alert-danger text-center" role="alert">
-        Invalid credentials.
-      </div>
-      <div class="text-center">
-        <a href="/login" class="btn btn-link">Try again</a>
-      </div>
-    `);
+    return res.redirect('/dashboard');
   }
+  res.status(401).send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login Failed</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container d-flex vh-100">
+    <div class="row justify-content-center align-self-center w-100">
+      <div class="col-md-5">
+        <div class="alert alert-danger text-center" role="alert">
+          Invalid credentials.
+        </div>
+        <div class="text-center">
+          <a href="/login" class="btn btn-link">Try again</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `);
 });
 
+// Dashboard
 app.get('/dashboard', isAuthenticated, async (req, res) => {
   const status = await getServerStatus();
-
   const statusBadge = status === 'running'
       ? `<span class="badge bg-success">Running</span>`
       : `<span class="badge bg-danger">Stopped</span>`;
-
   const disableStart = status === 'running' ? 'disabled' : '';
   const disableStop = status === 'stopped' ? 'disabled' : '';
 
   res.send(`
-    <html>
-    <head>
-      <title>Dashboard</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-      <script>
-        function confirmAction(url, message) {
-          if (confirm(message)) {
-            window.location.href = url;
-          }
-        }
-      </script>
-    </head>
-    <body class="p-4 bg-light">
-      <div class="container">
-        <h2 class="mb-4">Welcome, ${req.session.user}</h2>
-        <h5>Status: ${statusBadge}</h5>
-
-        <div class="d-flex gap-3 my-3">
-          <button class="btn btn-success" onclick="confirmAction('/start', 'Are you sure you want to START the server?')" ${disableStart}>Start Server</button>
-          <button class="btn btn-danger" onclick="confirmAction('/stop', 'Are you sure you want to STOP the server?')" ${disableStop}>Stop Server</button>
-        </div>
-
-        <a href="/status" class="btn btn-success">Server Status:</a>
-        <a href="/logout" class="btn btn-secondary">Logout</a>
-      </div>
-    </body>
-    </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script>
+    function confirmAction(url, message) {
+      if (confirm(message)) {
+        window.location.href = url;
+      }
+    }
+  </script>
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <h2 class="mb-4">Welcome, ${req.session.user}</h2>
+    <h5>Status: ${statusBadge}</h5>
+    <div class="d-flex gap-3 my-3">
+      <button class="btn btn-success" onclick="confirmAction('/start','Are you sure you want to START the server?')" ${disableStart}>Start Server</button>
+      <button class="btn btn-danger" onclick="confirmAction('/stop','Are you sure you want to STOP the server?')" ${disableStop}>Stop Server</button>
+      <a href="/logs" class="btn btn-primary">View Logs</a>
+      <a href="/status" class="btn btn-success">Server Status:</a>
+      <a href="/logout" class="btn btn-secondary">Logout</a>
+    </div>
+  </div>
+</body>
+</html>
   `);
 });
 
+// Display logs
+app.get('/logs', isAuthenticated, (req, res) => {
+  const logPath = path.resolve(__dirname, '../mc1/logs/latest.log');
+  fs.readFile(logPath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send(`<pre>Error reading log file: ${err.message}</pre><a href="/dashboard">Back</a>`);
+    }
+    const lines = data.split('\n');
+    const lastLines = lines.slice(-100).join('\n');
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server Logs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    pre { height: 80vh; overflow: auto; background: #000; color: #0f0; padding: 1rem; }
+  </style>
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <h3 class="mb-3">Minecraft Server Logs (last 100 lines)</h3>
+    <pre>${lastLines}</pre>
+    <a href="/dashboard" class="btn btn-link mt-3">Back to Dashboard</a>
+  </div>
+</body>
+</html>
+    `);
+  });
+});
+
+// Logout
 app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
-
-app.get('/', isAuthenticated, (req, res) => res.send('Hello from Express!'));
 
 // Start mc server
 app.get('/start', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
   const serverPath = path.resolve(__dirname, '../mc1');
-
-  // Check for live session via `-Q echo` (exit code 0 = exists)
   exec(`screen -S ${screenName} -Q echo`, (err) => {
     if (!err) {
       return res.send(`<pre>Server already running in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
     }
-
-    // Spawn a detached screen session
-    const args = [
-      '-dmS', screenName,
-      'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'
-    ];
-    const child = spawn('screen', args, {
-      cwd: serverPath,
-      stdio: 'ignore',
-      detached: true
-    });
-
-    child.on('error', (error) => {
-      return res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`);
-    });
-
+    const args = ['-dmS', screenName, 'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'];
+    const child = spawn('screen', args, { cwd: serverPath, stdio: 'ignore', detached: true });
+    child.on('error', error => res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`));
     child.unref();
     res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
   });
 });
 
-// Stop Minecraft server gracefully
+// Stop Minecraft server
 app.get('/stop', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
-
-  // 1) send the "stop" command  
-  // 2) then quit the screen session to clean up
-  const cmd = [
-    `screen -S ${screenName} -X stuff "stop\n"`,
-    `screen -S ${screenName} -X quit`
-  ].join(' && ');
-
-  exec(cmd, (error) => {
+  const cmd = [`screen -S ${screenName} -X stuff "stop\n"`, `screen -S ${screenName} -X quit`].join(' && ');
+  exec(cmd, error => {
     if (error) {
       return res.status(500).send(`<pre>Failed to stop server: ${error.message}</pre><a href="/dashboard">Back</a>`);
     }
@@ -180,14 +210,9 @@ app.get('/stop', isAuthenticated, (req, res) => {
 // Check server status
 const getServerStatus = () => {
   const screenName = 'mc1';
-  return new Promise((resolve) => {
-    // Query mode: returns exit code 0 if session exists
-    exec(`screen -S ${screenName} -Q echo`, (err) => {
-      resolve(err ? 'stopped' : 'running');
-    });
+  return new Promise(resolve => {
+    exec(`screen -S ${screenName} -Q echo`, err => resolve(err ? 'stopped' : 'running'));
   });
 };
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+app.listen(port, () => console.log(`Server is running at http://localhost:${port}`));
