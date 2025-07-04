@@ -128,7 +128,7 @@ app.get('/', isAuthenticated, (req, res) => res.send('Hello from Express!'));
 
 // Start mc server
 app.get('/start', isAuthenticated, (req, res) => {
-  const screenName = 'minecraft';
+  const screenName = 'mc1';
   const startCmd = `screen -ls | grep ${screenName}`;
 
   // Check if already running
@@ -137,7 +137,7 @@ app.get('/start', isAuthenticated, (req, res) => {
       return res.send(`<pre>Server already running in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
     }
 
-    const launchCmd = `screen -dmS ${screenName} java -Xms1G -Xmx6G -jar paper.jar nogui`;
+    const launchCmd = `screen -dmS ${screenName} java -Xms3G -Xmx10G -jar ../mc1/paper-1.21.4.jar nogui`;
     exec(launchCmd, (error) => {
       if (error) {
         return res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`);
@@ -149,7 +149,7 @@ app.get('/start', isAuthenticated, (req, res) => {
 
 // Stop mc server
 app.get('/stop', isAuthenticated, (req, res) => {
-  const stopCmd = `screen -S minecraft -X stuff "stop\n"`;
+  const stopCmd = `screen -S mc1 -X stuff "stop\n"`;
 
   exec(stopCmd, (error) => {
     if (error) {
@@ -161,8 +161,8 @@ app.get('/stop', isAuthenticated, (req, res) => {
 
 const getServerStatus = () => {
   return new Promise((resolve) => {
-    exec("screen -ls | grep minecraft", (err, stdout) => {
-      if (stdout.includes('minecraft')) {
+    exec("screen -ls | grep mc1", (err, stdout) => {
+      if (stdout.includes('mc1')) {
         resolve("running");
       } else {
         resolve("stopped");

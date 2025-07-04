@@ -1,5 +1,11 @@
 # minecraft-server-setup
 
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/deploy.sh
+chmod +x deploy.sh
+./deploy.sh
+
+
+
 pass aws secret key like ./deploy1.sh --secret="xyz"
 
 ## Complete:
