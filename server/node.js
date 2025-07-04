@@ -1,7 +1,8 @@
 const express = require('express');
 const statusMonitor = require('express-status-monitor');
 const session = require('express-session');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
+const path = require('path');
 const app = express();
 const port = 3000;
 
@@ -129,25 +130,37 @@ app.get('/', isAuthenticated, (req, res) => res.send('Hello from Express!'));
 // Start mc server
 app.get('/start', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
-  const startCmd = `screen -ls | grep ${screenName}`;
 
   // Check if already running
-  exec(startCmd, (err, stdout) => {
+  exec(`screen -ls | grep ${screenName}`, (err, stdout) => {
     if (stdout.includes(screenName)) {
       return res.send(`<pre>Server already running in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
     }
 
-    const launchCmd = `screen -dmS ${screenName} java -Xms3G -Xmx10G -jar ../mc1/paper-1.21.4.jar nogui`;
-    exec(launchCmd, (error) => {
-      if (error) {
-        return res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`);
-      }
-      res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
+    // Launch the server inside a new screen session using spawn
+    const serverPath = path.resolve(__dirname, '../mc1'); // Adjust as needed
+    const screenArgs = [
+      '-dmS', screenName,
+      'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'
+    ];
+
+    const child = spawn('screen', screenArgs, {
+      cwd: serverPath,
+      stdio: 'ignore', // No output capture
+      detached: true
     });
+
+    child.on('error', (error) => {
+      return res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`);
+    });
+
+    child.unref(); // Allow the child process to keep running after Node exits
+
+    return res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
   });
 });
 
-// Stop mc server
+// Stop Minecraft server gracefully
 app.get('/stop', isAuthenticated, (req, res) => {
   const stopCmd = `screen -S mc1 -X stuff "stop\n"`;
 
@@ -159,15 +172,15 @@ app.get('/stop', isAuthenticated, (req, res) => {
   });
 });
 
+// Check server status
 const getServerStatus = () => {
   return new Promise((resolve) => {
     exec("screen -ls | grep mc1", (err, stdout) => {
-      resolve("stopped");
-      // if (stdout.includes('mc1')) {
-      //   resolve("running");
-      // } else {
-      //   resolve("stopped");
-      // }
+      if (stdout.includes('mc1')) {
+        resolve("running");
+      } else {
+        resolve("stopped");
+      }
     });
   });
 };
