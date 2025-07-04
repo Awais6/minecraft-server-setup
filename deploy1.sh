@@ -35,7 +35,7 @@ CLOUD_PATH="mc"     # Optional path inside the bucket (e.g., 'folder/'). Leave e
 AWS_ACCESS_KEY_ID="usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93"
 AWS_SECRET_ACCESS_KEY=""
 BUCKET="mcstorage"         # C2 bucket name
-ENDPOINT=""
+ENDPOINT="https://us-003.s3.synologyc2.net"
 
 [[ -z "$DEST" ]] && DEST="./"
 
