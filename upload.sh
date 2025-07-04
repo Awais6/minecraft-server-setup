@@ -73,7 +73,13 @@ zip_mb=$(awk "BEGIN {printf \"%.2f\", $zip_size/1024/1024}")
 echo -e "\nZip file size: ${zip_mb} MB\n"
 
 #aws configure set default.s3.signature_version s3v4
-export AWS_S3_USE_SIGV4=1
+#export AWS_S3_USE_SIGV4=1
 
-aws --endpoint-url ${ENDPOINT} \
-  s3 cp "$ZIP_FILE" "s3://${BUCKET}/${CLOUD_PATH}$ZIP_FILE"
+aws --endpoint-url "$ENDPOINT" \
+    s3api put-object \
+    --bucket "$BUCKET" \
+    --key "${CLOUD_PATH}${ZIP_FILE}" \
+    --body "$ZIP_FILE"
+
+#aws --endpoint-url ${ENDPOINT} \
+#  s3 cp "$ZIP_FILE" "s3://${BUCKET}/${CLOUD_PATH}$ZIP_FILE"
