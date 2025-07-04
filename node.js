@@ -1,9 +1,21 @@
-const http = require('http');
+const express = require('express');
+const app = express();
+const port = 3000;
 
-const server = http.createServer((req, res) => {
-  res.end('Hello from Oracle Ubuntu server!');
+// Middleware (for parsing JSON)
+app.use(express.json());
+
+// Basic GET route
+app.get('/', (req, res) => {
+  res.send('Hello from Express!');
 });
 
-server.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+// Sample POST route
+app.post('/echo', (req, res) => {
+  res.json({ received: req.body });
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
 });
