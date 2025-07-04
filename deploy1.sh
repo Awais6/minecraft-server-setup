@@ -67,10 +67,10 @@ export AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY
 export AWS_DEFAULT_REGION=us-east-1
 
-echo "🔍 Checking available archive formats in s3://<<parameters.bucket>>/${CLOUD_PATH}"
+echo "🔍 Checking available archive formats in s3://${ENDPOINT}/${CLOUD_PATH}"
 
 set +e
-aws --endpoint-url <<parameters.endpoint>> \
+aws --endpoint-url ${ENDPOINT} \
   s3 ls "s3://${BUCKET}/${CLOUD_PATH}${BASE_NAME}.tar.zst" > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   FILE="${BASE_NAME}.tar.zst"
