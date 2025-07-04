@@ -112,6 +112,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
           <button class="btn btn-danger" onclick="confirmAction('/stop', 'Are you sure you want to STOP the server?')" ${disableStop}>Stop Server</button>
         </div>
 
+        <a href="/status" class="btn btn-success">Server Status</a>
         <a href="/logout" class="btn btn-secondary">Logout</a>
       </div>
     </body>

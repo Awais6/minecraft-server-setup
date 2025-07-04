@@ -32,3 +32,5 @@ ENDPOINT="$endpoint"
 EOF
 
 echo "✅ secrets.txt saved."
+
+cat secrets.txt

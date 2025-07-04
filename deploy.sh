@@ -11,6 +11,23 @@ read -p "Enter folder name: " folder
 
 FOLDER_NAME="$folder"
 
+echo -e "\n\nSetting world dir: $FOLDER_NAME"
+mkdir -p "$FOLDER_NAME"
+
+cd $FOLDER_NAME
+
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/configure.sh
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/download.sh
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/upload.sh
+
+chmod +x configure.sh
+chmod +x download.sh
+chmod +x upload.sh
+
+./configure.sh
+
+cd ../
+
 echo "Updaing System..."
 sudo apt-get update
 
@@ -74,11 +91,13 @@ aws configure set default.s3.signature_version s3v4
 
 echo "✅ All dependencies are installed!"
 
-echo -e "\n\nSetting world dir: $FOLDER_NAME"
-mkdir -p "$FOLDER_NAME"
+curl -O https://raw.githubusercontent.com/Awais6/minecraft-server-setup/refs/heads/main/server/setupnode.sh
+chmod +x setupnode.sh
 
 cd $FOLDER_NAME
 
-
+echo "Restoring World..."
+./download.sh
 
 echo "✅ M-C server setup complete!"
+echo "Now run ./setupnode.sh to setup server dashboard!"

@@ -7,7 +7,7 @@ set -e
 if [ -f "secrets.txt" ]; then
   source secrets.txt
 else
-  echo "❌ secrets.txt not found. Please run ./configure-secrets.sh first."
+  echo "❌ secrets.txt not found. Please run ./configure.sh first."
   exit 1
 fi
 
