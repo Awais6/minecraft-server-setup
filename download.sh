@@ -1,60 +1,26 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # Exit on error
 set -e
 
-echo "🚀 Starting Minecraft server setup..."
+# Load all variables from secrets.txt
+if [ -f "secrets.txt" ]; then
+  source secrets.txt
+else
+  echo "❌ secrets.txt not found. Please run ./configure-secrets.sh first."
+  exit 1
+fi
 
-# Default: unset
-SECRET=""
+echo "🚀 Starting restore"
 
-# Parse args manually
-for arg in "$@"; do
-  case $arg in
-    --secret=*)
-      SECRET="${arg#*=}"
-      shift
-      ;;
-  esac
-done
-
-# Now use the secret
-echo "🔐 SECRET is: $SECRET"
-
-echo "Updaing System..."
-sudo apt-get update
-
-echo "Installing Java..."
-sudo apt-get install -y openjdk-21-jdk
-
-echo "Installing zstd..."
-sudo apt-get install -y zstd
+echo "Check AWS CLI"
+aws --version
 
 echo "✅ Zstd found: $(zstd --version)"
-
-echo "Installing pipe viewer"
-sudo apt-get install -y pv
-
 echo "✅ PV found: $(pv --version)"
 
-echo "Installing unzip"
-sudo apt-get install -y unzip
-
-echo "Install AWS CLI"
-curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
-unzip "awscliv2.zip"
-sudo ./aws/install
-
-echo "✅ AWS found: $(aws --version)"
-aws configure set default.s3.signature_version s3v4
-
-BASE_NAME="world1" # Zip file name (without extension)
-DEST="mc1"           # Path where to download the file
-CLOUD_PATH="mc/"     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
-AWS_ACCESS_KEY_ID="usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93"
-AWS_SECRET_ACCESS_KEY="$SECRET"
-BUCKET="mcstorage"         # C2 bucket name
-ENDPOINT="https://us-003.s3.synologyc2.net"
+DEST="$FOLDER"
+BASE_NAME="$ZIP_FILE_NAME" # Zip file name (without extension)
 
 [[ -z "$DEST" ]] && DEST="./"
 
@@ -117,5 +83,3 @@ ls -l "$DEST"
 extracted_size=$(du -sb "$DEST" | awk '{print $1}')
 extracted_mb=$(awk "BEGIN {printf \"%.2f\", $extracted_size/1024/1024}")
 echo -e "\nExtracted output size: ${extracted_mb} MB"
-
-echo "✅ Minecraft server setup complete! Use 'sudo systemctl status minecraft' to check status."
