@@ -162,11 +162,12 @@ app.get('/stop', isAuthenticated, (req, res) => {
 const getServerStatus = () => {
   return new Promise((resolve) => {
     exec("screen -ls | grep mc1", (err, stdout) => {
-      if (stdout.includes('mc1')) {
-        resolve("running");
-      } else {
-        resolve("stopped");
-      }
+      resolve("stopped");
+      // if (stdout.includes('mc1')) {
+      //   resolve("running");
+      // } else {
+      //   resolve("stopped");
+      // }
     });
   });
 };
