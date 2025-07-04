@@ -37,6 +37,9 @@ sudo apt-get install -y pv
 
 echo "✅ PV found: $(pv --version)"
 
+echo "Installing unzip"
+sudo apt-get install -y unzip
+
 echo "Install AWS CLI"
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
 unzip awscliv2.zip
