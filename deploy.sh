@@ -64,30 +64,16 @@ else
   echo "✅ Unzip found: $(unzip -v | head -n 1)"
 fi
 
-# Check and install AWS CLI
+# Check and install awscli
 if ! command -v aws &> /dev/null; then
-  echo "Installing AWS CLI..."
-  
-  ARCH=$(uname -m)
-  if [ "$ARCH" == "x86_64" ]; then
-    ARCH_DL="awscli-exe-linux-x86_64.zip"
-  elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    ARCH_DL="awscli-exe-linux-aarch64.zip"
-  else
-    echo "❌ Unsupported architecture: $ARCH"
-    exit 1
-  fi
-
-  curl "https://awscli.amazonaws.com/$ARCH_DL" -o "awscliv2.zip"
-  unzip -q awscliv2.zip
-  sudo ./aws/install
-  rm -rf aws awscliv2.zip
+  echo "Installing awscli..."
+  sudo apt-get install -y awscli
 else
   echo "✅ AWS CLI found: $(aws --version)"
 fi
 
 # Ensure AWS CLI uses S3 Signature Version 4
-aws configure set default.s3.signature_version s3v4
+#aws configure set default.s3.signature_version s3v4
 
 echo "✅ All dependencies are installed!"
 

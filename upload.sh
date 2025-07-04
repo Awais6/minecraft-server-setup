@@ -75,11 +75,16 @@ echo -e "\nZip file size: ${zip_mb} MB\n"
 #aws configure set default.s3.signature_version s3v4
 #export AWS_S3_USE_SIGV4=1
 
-aws --endpoint-url "$ENDPOINT" \
-    s3api put-object \
-    --bucket "$BUCKET" \
-    --key "${CLOUD_PATH}${ZIP_FILE}" \
-    --body "$ZIP_FILE"
+aws --endpoint-url ${ENDPOINT} s3 cp "$ZIP_FILE" "s3://${BUCKET}/${CLOUD_PATH}$ZIP_FILE"
 
-#aws --endpoint-url ${ENDPOINT} \
-#  s3 cp "$ZIP_FILE" "s3://${BUCKET}/${CLOUD_PATH}$ZIP_FILE"
+#aws --endpoint-url "https://us-003.s3.synologyc2.net" s3 cp "./world1.tar.zst" "s3://mcstorage/mc/world1.tar.zst" --debug
+#
+#aws --endpoint-url "https://us-003.s3.synologyc2.net" s3api put-object --bucket mcstorage --key "mc/world1.tar.zst" --body "./world1.tar.zst"
+#
+#aws --endpoint-url "https://us-003.s3.synologyc2.net" s3 presign "s3://mcstorage/mc/world1.tar.zst" --expires-in 3600
+#
+#curl -X PUT -T "./world1.tar.zst" -H "Content-Type: application/octet-stream" "https://us-003.s3.synologyc2.net/mcstorage/mc/world1.tar.zst?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93%2F20250704%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250704T113739Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=413395eb72d5f4b37024b4fa936143e3a51c9f755cefc98b93c47fc01684c6e2"
+#
+#aws --endpoint-url "https://us-003.s3.synologyc2.net" s3api put-object --bucket mcstorage --key "mc/world1.tar.zst" --body "./world1.tar.zst"
+#
+#aws --endpoint-url "https://us-003.s3.synologyc2.net" s3 ls s3://mcstorage/mc/
