@@ -5,6 +5,22 @@ set -e
 
 echo "🚀 Starting Minecraft server setup..."
 
+# Default: unset
+SECRET=""
+
+# Parse args manually
+for arg in "$@"; do
+  case $arg in
+    --secret=*)
+      SECRET="${arg#*=}"
+      shift
+      ;;
+  esac
+done
+
+# Now use the secret
+echo "🔐 SECRET is: $SECRET"
+
 echo "Updaing System..."
 sudo apt-get update
 
@@ -33,7 +49,7 @@ BASE_NAME="world1" # Zip file name (without extension)
 DEST="mc1"           # Path where to download the file
 CLOUD_PATH="mc"     # Optional path inside the bucket (e.g., 'folder/'). Leave empty for root.
 AWS_ACCESS_KEY_ID="usrMsIu1Ki7LQuQsUi29ndOJQCi9pR93"
-AWS_SECRET_ACCESS_KEY=""
+AWS_SECRET_ACCESS_KEY="$SECRET"
 BUCKET="mcstorage"         # C2 bucket name
 ENDPOINT="https://us-003.s3.synologyc2.net"
 
