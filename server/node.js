@@ -61,20 +61,6 @@ app.get('/login', (req, res) => {
       </div>
     </div>
   </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const dateElement = document.getElementById('lastBackupDate');
-      const dateStr = dateElement.getAttribute('data-date');
-      if (dateStr) {
-        try {
-          const date = new Date(dateStr);
-          dateElement.textContent = date.toLocaleString();
-        } catch (e) {
-          console.error('Error formatting date:', e);
-        }
-      }
-    });
-  </script>
 </body>
 </html>
 `);
@@ -134,7 +120,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   const serverPath = path.resolve(__dirname, '../mc1');
   const lastBackupFile = path.join(serverPath, 'last_backup.txt');
   let lastBackupDate = null;
-try {
+  try {
     if (!backupInfo || !backupInfo.lastBackup) {
       const data = fs.readFileSync(lastBackupFile, 'utf8');
       lastBackupDate = new Date(data).toISOString();
@@ -203,6 +189,20 @@ try {
       <a href="/logout" class="btn btn-secondary">Logout</a>
     </div>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateElement = document.getElementById('lastBackupDate');
+      const dateStr = dateElement.getAttribute('data-date');
+      if (dateStr) {
+        try {
+          const date = new Date(dateStr);
+          dateElement.textContent = date.toLocaleString();
+        } catch (e) {
+          console.error('Error formatting date:', e);
+        }
+      }
+    });
+  </script>
 </body>
 </html>
 `);
