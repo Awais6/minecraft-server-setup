@@ -26,8 +26,10 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
+app.get('/', isAuthenticated, (req, res) => res.redirect("/dashboard"));
+
 // Login page
-app.get(['/', '/login'], (req, res) => {
+app.get('/login', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
