@@ -108,6 +108,10 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   const disableStart = status === 'running' ? 'disabled' : '';
   const disableStop = status === 'stopped' ? 'disabled' : '';
 
+  // Read and clear error message from session
+  const errorMessage = req.session.error;
+  delete req.session.error;
+
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -120,7 +124,10 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   <div class="container">
     <h2 class="mb-4">Welcome, ${req.session.user}</h2>
     <h5>Status: ${statusBadge}</h5>
-    <div class="d-flex gap-3 my-3">
+
+    ${errorMessage ? `<div class="alert alert-danger" role="alert">${errorMessage}</div>` : ''}
+
+    <div class="d-flex gap-3 my-3 flex-wrap">
       <form method="POST" action="/start" onsubmit="return confirm('Are you sure you want to start the server?');">
         <button type="submit" class="btn btn-success" ${disableStart}>Start Server</button>
       </form>
@@ -211,7 +218,7 @@ app.post('/backup', isAuthenticated, (req, res) => {
   exec(`bash ${scriptPath}`, {cwd: serverPath}, (error, stdout, stderr) => {
     if (error) {
       console.error(`Backup error: ${error.message}`);
-      // Optionally, you can flash an error message or handle it differently
+      req.session.error = `Backup failed: ${error.message}`;
     }
     res.redirect('/dashboard');
   });
@@ -224,7 +231,7 @@ app.post('/restore', isAuthenticated, (req, res) => {
   exec(`bash ${scriptPath}`, {cwd: serverPath}, (error, stdout, stderr) => {
     if (error) {
       console.error(`Restore error: ${error.message}`);
-      // Optionally, you can flash an error message or handle it differently
+      req.session.error = `Restore failed: ${error.message}`;
     }
     res.redirect('/dashboard');
   });
