@@ -23,5 +23,4 @@ echo "Installing packages..."
 npm install
 
 pm2 start node.js
-pm2 monit
 pm2 save
