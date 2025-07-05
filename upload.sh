@@ -82,6 +82,9 @@ echo -e "\nZip file size: ${zip_mb} MB\n"
 
 aws --endpoint-url ${ENDPOINT} s3 cp "$ZIP_FILE" "s3://${BUCKET}/${CLOUD_PATH}$ZIP_FILE"
 
+echo "Removing zip file..."
+rm -f "$FILE_ZST"
+
 #aws --endpoint-url "https://us-003.s3.synologyc2.net" s3 cp "./world1.tar.zst" "s3://mcstorage/mc/world1.tar.zst" --debug
 #
 #aws --endpoint-url "https://us-003.s3.synologyc2.net" s3api put-object --bucket mcstorage --key "mc/world1.tar.zst" --body "./world1.tar.zst"
