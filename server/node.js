@@ -27,9 +27,8 @@ function isAuthenticated(req, res, next) {
 }
 
 // Login page
-app.get('/login', (req, res) => {
-  res.send(`
-<!DOCTYPE html>
+app.get(['/', '/login'], (req, res) => {
+  res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -62,7 +61,7 @@ app.get('/login', (req, res) => {
   </div>
 </body>
 </html>
-  `);
+`);
 });
 
 // Handle login
@@ -72,8 +71,7 @@ app.post('/login', (req, res) => {
     req.session.user = email;
     return res.redirect('/dashboard');
   }
-  res.status(401).send(`
-<!DOCTYPE html>
+  res.status(401).send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -96,7 +94,7 @@ app.post('/login', (req, res) => {
   </div>
 </body>
 </html>
-  `);
+`);
 });
 
 // Dashboard
@@ -108,37 +106,33 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   const disableStart = status === 'running' ? 'disabled' : '';
   const disableStop = status === 'stopped' ? 'disabled' : '';
 
-  res.send(`
-<!DOCTYPE html>
+  res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script>
-    function confirmAction(url, message) {
-      if (confirm(message)) {
-        window.location.href = url;
-      }
-    }
-  </script>
 </head>
 <body class="bg-light p-4">
   <div class="container">
     <h2 class="mb-4">Welcome, ${req.session.user}</h2>
     <h5>Status: ${statusBadge}</h5>
     <div class="d-flex gap-3 my-3">
-      <button class="btn btn-success" onclick="confirmAction('/start','Are you sure you want to START the server?')" ${disableStart}>Start Server</button>
-      <button class="btn btn-danger" onclick="confirmAction('/stop','Are you sure you want to STOP the server?')" ${disableStop}>Stop Server</button>
+      <form method="POST" action="/start">
+        <button type="submit" class="btn btn-success" ${disableStart}>Start Server</button>
+      </form>
+      <form method="POST" action="/stop">
+        <button type="submit" class="btn btn-danger" ${disableStop}>Stop Server</button>
+      </form>
       <a href="/logs" class="btn btn-primary">View Logs</a>
-      <a href="/status" class="btn btn-success">Server Status:</a>
+      <a href="/status" class="btn btn-success">Server Status</a>
       <a href="/logout" class="btn btn-secondary">Logout</a>
     </div>
   </div>
 </body>
 </html>
-  `);
+`);
 });
 
 // Display logs
@@ -150,8 +144,7 @@ app.get('/logs', isAuthenticated, (req, res) => {
     }
     const lines = data.split('\n');
     const lastLines = lines.slice(-100).join('\n');
-    res.send(`
-<!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -180,30 +173,26 @@ app.get('/logout', (req, res) => {
 });
 
 // Start mc server
-app.get('/start', isAuthenticated, (req, res) => {
+app.post('/start', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
   const serverPath = path.resolve(__dirname, '../mc1');
   exec(`screen -S ${screenName} -Q echo`, (err) => {
     if (!err) {
-      return res.send(`<pre>Server already running in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
+      return res.redirect('/dashboard');
     }
     const args = ['-dmS', screenName, 'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'];
     const child = spawn('screen', args, { cwd: serverPath, stdio: 'ignore', detached: true });
-    child.on('error', error => res.status(500).send(`<pre>Error: ${error.message}</pre><a href="/dashboard">Back</a>`));
     child.unref();
-    res.send(`<pre>Server started in screen '${screenName}'.</pre><a href="/dashboard">Back</a>`);
+    res.redirect('/dashboard');
   });
 });
 
 // Stop Minecraft server
-app.get('/stop', isAuthenticated, (req, res) => {
+app.post('/stop', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
   const cmd = [`screen -S ${screenName} -X stuff "stop\n"`, `screen -S ${screenName} -X quit`].join(' && ');
-  exec(cmd, error => {
-    if (error) {
-      return res.status(500).send(`<pre>Failed to stop server: ${error.message}</pre><a href="/dashboard">Back</a>`);
-    }
-    res.send(`<pre>Server stopped and screen session '${screenName}' closed.</pre><a href="/dashboard">Back</a>`);
+  exec(cmd, () => {
+    res.redirect('/dashboard');
   });
 });
 
