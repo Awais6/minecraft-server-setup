@@ -33,6 +33,11 @@ if [ -z "$(ls -A "$FOLDER")" ]; then
   exit 0
 fi
 
+echo "Removing FOLDER backup file!"
+
+FILE_ZST="$FOLDER/${ZIP_FILE}"
+rm -f "$FILE_ZST"
+
 echo "✅ Folder '$FOLDER' exists and is not empty. Creating zip using zstd with $LEVEL level..."
 
 total_size=$(du -sb "$FOLDER" | awk '{print $1}')
