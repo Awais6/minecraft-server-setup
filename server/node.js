@@ -290,14 +290,11 @@ app.post('/backup', isAuthenticated, async (req, res) => {
       });
     });
 
-    // Assuming the zip file is named backup.zip in serverPath (adjust if different)
-    const zipFilePath = path.join(serverPath, 'backup.zip');
+    // Extract zip size from the backup logs
     let zipSize = 'N/A';
-    try {
-      zipSize = await getFileSize(zipFilePath);
-      backupLog.push(`Zip file size after backup: ${zipSize}`);
-    } catch (e) {
-      backupLog.push('Zip file not found or error getting zip size.');
+    const zipSizeMatch = backupLog.join('').match(/Zip file size: ([0-9.]+\s*[KMGT]?B)/i);
+    if (zipSizeMatch && zipSizeMatch[1]) {
+      zipSize = zipSizeMatch[1];
     }
 
     // Save last backup datetime to file
