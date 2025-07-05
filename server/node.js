@@ -121,10 +121,10 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     <h2 class="mb-4">Welcome, ${req.session.user}</h2>
     <h5>Status: ${statusBadge}</h5>
     <div class="d-flex gap-3 my-3">
-      <form method="POST" action="/start">
+      <form method="POST" action="/start" onsubmit="return confirm('Are you sure you want to start the server?');">
         <button type="submit" class="btn btn-success" ${disableStart}>Start Server</button>
       </form>
-      <form method="POST" action="/stop">
+      <form method="POST" action="/stop" onsubmit="return confirm('Are you sure you want to stop the server?');">
         <button type="submit" class="btn btn-danger" ${disableStop}>Stop Server</button>
       </form>
       <a href="/logs" class="btn btn-primary">View Logs</a>
