@@ -61,6 +61,20 @@ app.get('/login', (req, res) => {
       </div>
     </div>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateElement = document.getElementById('lastBackupDate');
+      const dateStr = dateElement.getAttribute('data-date');
+      if (dateStr) {
+        try {
+          const date = new Date(dateStr);
+          dateElement.textContent = date.toLocaleString();
+        } catch (e) {
+          console.error('Error formatting date:', e);
+        }
+      }
+    });
+  </script>
 </body>
 </html>
 `);
@@ -120,12 +134,12 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   const serverPath = path.resolve(__dirname, '../mc1');
   const lastBackupFile = path.join(serverPath, 'last_backup.txt');
   let lastBackupDate = null;
-  try {
+try {
     if (!backupInfo || !backupInfo.lastBackup) {
       const data = fs.readFileSync(lastBackupFile, 'utf8');
-      lastBackupDate = new Date(data).toLocaleString();
+      lastBackupDate = new Date(data).toISOString();
     } else {
-      lastBackupDate = new Date(backupInfo.lastBackup).toLocaleString();
+      lastBackupDate = new Date(backupInfo.lastBackup).toISOString();
     }
   } catch {
     lastBackupDate = 'No backups yet';
@@ -169,7 +183,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     ${backupLogsHtml}
     ${backupInfo ? `<script>alert(${JSON.stringify(backupInfo.message)});</script>` : ''}
 
-    <p><strong>Last Backup:</strong> ${lastBackupDate}</p>
+<p><strong>Last Backup:</strong> <span id="lastBackupDate" data-date="${lastBackupDate === 'No backups yet' ? '' : lastBackupDate}">${lastBackupDate === 'No backups yet' ? 'No backups yet' : 'Loading...'}</span></p>
 
     <div class="d-flex gap-3 my-3 flex-wrap">
       <form method="POST" action="/start" onsubmit="return confirm('Are you sure you want to start the server?');">
