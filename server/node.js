@@ -127,6 +127,12 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
       <form method="POST" action="/stop" onsubmit="return confirm('Are you sure you want to stop the server?');">
         <button type="submit" class="btn btn-danger" ${disableStop}>Stop Server</button>
       </form>
+      <form method="POST" action="/backup" onsubmit="return confirm('Are you sure you want to backup the server?');">
+        <button type="submit" class="btn btn-success">Backup</button>
+      </form>
+      <form method="POST" action="/restore" onsubmit="return confirm('Are you sure you want to restore the server?');">
+        <button type="submit" class="btn btn-warning">Restore</button>
+      </form>
       <a href="/logs" class="btn btn-primary">View Logs</a>
       <a href="/status" class="btn btn-success">Server Status</a>
       <a href="/logout" class="btn btn-secondary">Logout</a>
@@ -194,6 +200,32 @@ app.post('/stop', isAuthenticated, (req, res) => {
   const screenName = 'mc1';
   const cmd = [`screen -S ${screenName} -X stuff "stop\n"`, `screen -S ${screenName} -X quit`].join(' && ');
   exec(cmd, () => {
+    res.redirect('/dashboard');
+  });
+});
+
+// Backup Minecraft server - run upload.sh
+app.post('/backup', isAuthenticated, (req, res) => {
+  const serverPath = path.resolve(__dirname, '../mc1');
+  const scriptPath = path.join(serverPath, 'upload.sh');
+  exec(`bash ${scriptPath}`, {cwd: serverPath}, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Backup error: ${error.message}`);
+      // Optionally, you can flash an error message or handle it differently
+    }
+    res.redirect('/dashboard');
+  });
+});
+
+// Restore Minecraft server - run restore.sh
+app.post('/restore', isAuthenticated, (req, res) => {
+  const serverPath = path.resolve(__dirname, '../mc1');
+  const scriptPath = path.join(serverPath, 'restore.sh');
+  exec(`bash ${scriptPath}`, {cwd: serverPath}, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Restore error: ${error.message}`);
+      // Optionally, you can flash an error message or handle it differently
+    }
     res.redirect('/dashboard');
   });
 });
