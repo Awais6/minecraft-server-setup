@@ -20,9 +20,7 @@ const userName = "admin@sparking.com";
 const pass = "minecraft123";
 
 function isAuthenticated(req, res, next) {
-  if (req.session && req.session.user === userName) {
-    return next();
-  }
+  if (req.session && req.session.user === userName) return next();
   res.redirect('/login');
 }
 
@@ -45,12 +43,12 @@ app.get(['/', '/login'], (req, res) => {
             <h3 class="card-title text-center mb-4">Login</h3>
             <form method="POST" action="/login">
               <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="email" name="email" required placeholder="admin@example.com">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" id="email" name="email" class="form-control" required placeholder="enter email">
               </div>
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required placeholder="secret123">
+                <input type="password" id="password" name="password" class="form-control" required placeholder="enter password">
               </div>
               <button type="submit" class="btn btn-primary w-100">Login</button>
             </form>
@@ -63,49 +61,18 @@ app.get(['/', '/login'], (req, res) => {
 </html>
 `);
 });
-
-// Handle login
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (email === userName && password === pass) {
     req.session.user = email;
     return res.redirect('/dashboard');
   }
-  res.status(401).send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login Failed</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <div class="container d-flex vh-100">
-    <div class="row justify-content-center align-self-center w-100">
-      <div class="col-md-5">
-        <div class="alert alert-danger text-center" role="alert">
-          Invalid credentials.
-        </div>
-        <div class="text-center">
-          <a href="/login" class="btn btn-link">Try again</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-`);
+  res.redirect('/login');
 });
 
 // Dashboard
 app.get('/dashboard', isAuthenticated, async (req, res) => {
   const status = await getServerStatus();
-  const statusBadge = status === 'running'
-      ? `<span class="badge bg-success">Running</span>`
-      : `<span class="badge bg-danger">Stopped</span>`;
-  const disableStart = status === 'running' ? 'disabled' : '';
-  const disableStop = status === 'stopped' ? 'disabled' : '';
-
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,53 +84,59 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 <body class="bg-light p-4">
   <div class="container">
     <h2 class="mb-4">Welcome, ${req.session.user}</h2>
-    <h5>Status: ${statusBadge}</h5>
+    <h5>Status: <span class="badge bg-${status==='running'?'success':'danger'}">${status.toUpperCase()}</span></h5>
     <div class="d-flex gap-3 my-3">
-      <form method="POST" action="/start">
-        <button type="submit" class="btn btn-success" ${disableStart}>Start Server</button>
-      </form>
-      <form method="POST" action="/stop">
-        <button type="submit" class="btn btn-danger" ${disableStop}>Stop Server</button>
-      </form>
-      <a href="/logs" class="btn btn-primary">View Logs</a>
-      <a href="/status" class="btn btn-success">Server Status</a>
+      <form method="POST" action="/start"><button class="btn btn-success" ${status==='running'?'disabled':''}>Start</button></form>
+      <form method="POST" action="/stop"><button class="btn btn-danger" ${status==='stopped'?'disabled':''}>Stop</button></form>
+      <button class="btn btn-warning" onclick="if(confirm('Backup world?')) startBackup()">Backup</button>
+      <button class="btn btn-info" onclick="if(confirm('Restore world?')) startRestore()">Restore</button>
+      <a href="/logs" class="btn btn-primary">Logs</a>
       <a href="/logout" class="btn btn-secondary">Logout</a>
     </div>
+    <div id="progressSection" style="display:none;">
+      <div class="mb-2">Progress: <span id="progressText">0%</span></div>
+      <div class="progress mb-2"><div id="progressBar" class="progress-bar" role="progressbar" style="width:0%"></div></div>
+      <pre id="logOutput" style="height:200px; overflow:auto; background:#f8f9fa; padding:1rem;"></pre>
+    </div>
   </div>
+<script>
+function streamProcess(endpoint) {
+  document.getElementById('progressSection').style.display = 'block';
+  const log = document.getElementById('logOutput');
+  const bar = document.getElementById('progressBar');
+  const text = document.getElementById('progressText');
+  const es = new EventSource(endpoint);
+  es.onmessage = e => {
+    const d = JSON.parse(e.data);
+    log.textContent += d.message + "\n";
+    if (d.percent) { bar.style.width = d.percent + '%'; text.textContent = d.percent + '%'; }
+    if (d.done) es.close();
+    log.scrollTop = log.scrollHeight;
+  };
+}
+function startBackup() { streamProcess('/backup-stream'); }
+function startRestore() { streamProcess('/restore-stream'); }
+</script>
 </body>
 </html>
 `);
 });
 
-// Display logs
+// Logs
 app.get('/logs', isAuthenticated, (req, res) => {
   const logPath = path.resolve(__dirname, '../mc1/logs/latest.log');
   fs.readFile(logPath, 'utf8', (err, data) => {
-    if (err) {
-      return res.status(500).send(`<pre>Error reading log file: ${err.message}</pre><a href="/dashboard">Back</a>`);
-    }
-    const lines = data.split('\n');
-    const lastLines = lines.slice(-100).join('\n');
+    if (err) return res.status(500).send(`Error: ${err.message}`);
     res.send(`<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Server Logs</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    pre { height: 80vh; overflow: auto; background: #000; color: #0f0; padding: 1rem; }
-  </style>
-</head>
-<body class="bg-light p-4">
-  <div class="container">
-    <h3 class="mb-3">Minecraft Server Logs (last 100 lines)</h3>
-    <pre>${lastLines}</pre>
-    <a href="/dashboard" class="btn btn-link mt-3">Back to Dashboard</a>
-  </div>
-</body>
-</html>
-    `);
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Logs</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<body class="bg-light p-4"><div class="container">
+  <h3>Server Logs</h3>
+  <pre style="background:#000;color:#0f0;padding:1rem;height:80vh;overflow:auto;">${data}</pre>
+  <a href="/dashboard" class="btn btn-link">Back</a>
+</div></body></html>
+`);
   });
 });
 
@@ -172,36 +145,40 @@ app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
-// Start mc server
-app.post('/start', isAuthenticated, (req, res) => {
-  const screenName = 'mc1';
-  const serverPath = path.resolve(__dirname, '../mc1');
-  exec(`screen -S ${screenName} -Q echo`, (err) => {
-    if (!err) {
-      return res.redirect('/dashboard');
-    }
-    const args = ['-dmS', screenName, 'java', '-Xms3G', '-Xmx10G', '-jar', 'paper-1.21.4.jar', 'nogui'];
-    const child = spawn('screen', args, { cwd: serverPath, stdio: 'ignore', detached: true });
-    child.unref();
-    res.redirect('/dashboard');
-  });
-});
-
-// Stop Minecraft server
+// Control
+app.post('/start', isAuthenticated, (req, res) => controlScreen('paper-1.21.4.jar', ['-Xms3G','-Xmx10G','-jar','paper-1.21.4.jar','nogui'], res));
 app.post('/stop', isAuthenticated, (req, res) => {
-  const screenName = 'mc1';
-  const cmd = [`screen -S ${screenName} -X stuff "stop\n"`, `screen -S ${screenName} -X quit`].join(' && ');
-  exec(cmd, () => {
-    res.redirect('/dashboard');
-  });
+  exec(`screen -S mc1 -X stuff "stop\n" && screen -S mc1 -X quit`, () => res.redirect('/dashboard'));
 });
 
-// Check server status
-const getServerStatus = () => {
-  const screenName = 'mc1';
-  return new Promise(resolve => {
-    exec(`screen -S ${screenName} -Q echo`, err => resolve(err ? 'stopped' : 'running'));
+// Streams
+function streamScript(route, script) {
+  app.get(route, isAuthenticated, (req, res) => {
+    res.writeHead(200, {'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
+    const child = spawn('bash', [path.resolve(__dirname,'../mc1',script)]);
+    child.stdout.on('data', d => parseSend(d, res));
+    child.stderr.on('data', d => res.write(`data: ${JSON.stringify({message:d.toString()})}\n\n`));
+    child.on('close', () => res.write(`data: ${JSON.stringify({message:'Done',done:true})}\n\n`));
   });
-};
+}
+function parseSend(chunk, res) {
+  chunk.toString().split(/\r?\n/).forEach(l => {
+    if (!l) return;
+    const m = l.match(/(\d+)%/);
+    res.write(`data: ${JSON.stringify({message:l, percent: m?m[1]:null})}\n\n`);
+  });
+}
+streamScript('/backup-stream','upload.sh');
+streamScript('/restore-stream','download.sh');
 
-app.listen(port, () => console.log(`Server is running at http://localhost:${port}`));
+// Helper
+function controlScreen(cmd,args,res) {
+  exec(`screen -S mc1 -Q echo`, err => {
+    if (!err) return res.redirect('/dashboard');
+    const ch = spawn('screen',['-dmS','mc1',cmd,...args]); ch.unref(); res.redirect('/dashboard');
+  });
+}
+function getServerStatus() { return new Promise(r => exec(`screen -S mc1 -Q echo`, err => r(err?'stopped':'running')));
+}
+
+app.listen(port, ()=>console.log(`Server running on http://localhost:${port}`));
