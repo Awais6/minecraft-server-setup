@@ -112,13 +112,52 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
   const errorMessage = req.session.error;
   delete req.session.error;
 
+  // Read backup info from session
+  const backupInfo = req.session.backupInfo;
+  delete req.session.backupInfo;
+
+  // Read last backup datetime from file if not in session
+  const serverPath = path.resolve(__dirname, '../mc1');
+  const lastBackupFile = path.join(serverPath, 'last_backup.txt');
+  let lastBackupDate = null;
+  try {
+    if (!backupInfo || !backupInfo.lastBackup) {
+      const data = fs.readFileSync(lastBackupFile, 'utf8');
+      lastBackupDate = new Date(data).toLocaleString();
+    } else {
+      lastBackupDate = new Date(backupInfo.lastBackup).toLocaleString();
+    }
+  } catch {
+    lastBackupDate = 'No backups yet';
+  }
+
+  // Prepare backup alert HTML
+  let backupAlert = '';
+  let backupLogsHtml = '';
+  if (backupInfo) {
+    const alertClass = backupInfo.success ? 'alert-success' : 'alert-danger';
+    backupAlert = `<div class="alert ${alertClass}" role="alert">${backupInfo.message}</div>`;
+    if (backupInfo.rawSize && backupInfo.zipSize) {
+      backupAlert += `<p>Raw folder size: <strong>${backupInfo.rawSize}</strong></p>`;
+      backupAlert += `<p>Zip file size: <strong>${backupInfo.zipSize}</strong></p>`;
+    }
+    if (backupInfo.logs) {
+      backupLogsHtml = `
+        <details class="mb-3">
+          <summary>Backup Logs</summary>
+          <pre style="background:#f8f9fa; padding:1rem; max-height: 300px; overflow:auto;">${backupInfo.logs}</pre>
+        </details>
+      `;
+    }
+  }
+
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 </head>
 <body class="bg-light p-4">
   <div class="container">
@@ -126,6 +165,11 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     <h5>Status: ${statusBadge}</h5>
 
     ${errorMessage ? `<div class="alert alert-danger" role="alert">${errorMessage}</div>` : ''}
+    ${backupAlert}
+    ${backupLogsHtml}
+    ${backupInfo ? `<script>alert(${JSON.stringify(backupInfo.message)});</script>` : ''}
+
+    <p><strong>Last Backup:</strong> ${lastBackupDate}</p>
 
     <div class="d-flex gap-3 my-3 flex-wrap">
       <form method="POST" action="/start" onsubmit="return confirm('Are you sure you want to start the server?');">
@@ -212,16 +256,73 @@ app.post('/stop', isAuthenticated, (req, res) => {
 });
 
 // Backup Minecraft server - run upload.sh
-app.post('/backup', isAuthenticated, (req, res) => {
+app.post('/backup', isAuthenticated, async (req, res) => {
   const serverPath = path.resolve(__dirname, '../mc1');
   const scriptPath = path.join(serverPath, 'upload.sh');
-  exec(`bash ${scriptPath}`, {cwd: serverPath}, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Backup error: ${error.message}`);
-      req.session.error = `Backup failed: ${error.message}`;
+  const backupLog = [];
+  try {
+    // Get raw folder size before backup
+    const rawSize = await getFolderSize(serverPath);
+    backupLog.push(`Raw folder size before backup: ${rawSize}`);
+
+    // Run upload.sh and capture stdout/stderr
+    await new Promise((resolve, reject) => {
+      const child = exec(`bash ${scriptPath}`, {cwd: serverPath});
+
+      child.stdout.on('data', (data) => {
+        backupLog.push(data.toString());
+      });
+
+      child.stderr.on('data', (data) => {
+        backupLog.push(data.toString());
+      });
+
+      child.on('error', (err) => {
+        reject(err);
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Backup script exited with code ${code}`));
+        }
+      });
+    });
+
+    // Assuming the zip file is named backup.zip in serverPath (adjust if different)
+    const zipFilePath = path.join(serverPath, 'backup.zip');
+    let zipSize = 'N/A';
+    try {
+      zipSize = await getFileSize(zipFilePath);
+      backupLog.push(`Zip file size after backup: ${zipSize}`);
+    } catch (e) {
+      backupLog.push('Zip file not found or error getting zip size.');
     }
-    res.redirect('/dashboard');
-  });
+
+    // Save last backup datetime to file
+    const lastBackupFile = path.join(serverPath, 'last_backup.txt');
+    const now = new Date().toISOString();
+    fs.writeFileSync(lastBackupFile, now);
+
+    // Save info in session to show on dashboard
+    req.session.backupInfo = {
+      success: true,
+      message: `Backup completed successfully.`,
+      rawSize,
+      zipSize,
+      logs: backupLog.join(''),
+      lastBackup: now,
+    };
+  } catch (error) {
+    console.error(`Backup error: ${error.message}`);
+    req.session.backupInfo = {
+      success: false,
+      message: `Backup failed: ${error.message}`,
+      logs: backupLog.join(''),
+    };
+  }
+  res.redirect('/dashboard');
 });
 
 // Restore Minecraft server - run restore.sh
@@ -242,6 +343,30 @@ const getServerStatus = () => {
   const screenName = 'mc1';
   return new Promise(resolve => {
     exec(`screen -S ${screenName} -Q echo`, err => resolve(err ? 'stopped' : 'running'));
+  });
+};
+
+const getFolderSize = (folderPath) => {
+  return new Promise((resolve, reject) => {
+    exec(`du -sh ${folderPath}`, (err, stdout) => {
+      if (err) return reject(err);
+      // stdout example: "1.2G    /path/to/folder"
+      const size = stdout.split('\t')[0];
+      resolve(size);
+    });
+  });
+};
+
+const getFileSize = (filePath) => {
+  return new Promise((resolve, reject) => {
+    fs.stat(filePath, (err, stats) => {
+      if (err) return reject(err);
+      // Convert bytes to human-readable format
+      const i = Math.floor(Math.log(stats.size) / Math.log(1024));
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const size = (stats.size / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+      resolve(size);
+    });
   });
 };
 
